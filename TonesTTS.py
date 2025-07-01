@@ -52,26 +52,13 @@ async def main():
 
     # Проверяем статус задачи
     print("\n⏳ Ожидание завершения генерации...")
-    while True:
-        try:
-            status = await fy.is_tts_job_ready(job_token)
-            print(f"📊 Статус задачи: {status['state']['status']}")
 
-            if status["state"]["status"] == "complete_success":
-                break
-            elif status["state"]["status"] == "complete_failure":
-                print("❌ Сервер вернул ошибку при генерации речи.")
-                return
 
-            await asyncio.sleep(2)
-        except Exception as e:
-            print(f"❌ Ошибка проверки статуса: {e}")
-            return
-
-    # Скачиваем аудиофайл
-    print("\n📥 Загрузка готового аудиофайла...")
     try:
-        audio_content = await fy.retreive_audio_file(job_token)
+        wav  = await fy.tts_poll(job_token)
+        audio_content = wav.content
+            # Скачиваем аудиофайл
+        print("\n📥 Загрузка готового аудиофайла...")
         output_file = "output.wav"
 
         with open(output_file, "wb") as f:
