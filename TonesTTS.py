@@ -6,13 +6,7 @@ async def main():
     # Инициализируем клиент
     fy = AsyncFakeYou()
 
-    # Авторизация
-    try:
-        login = await fy.login("mihandr1@mail.ru", "199621368m")
-        print(f"✅ Успешно вошли как: {login.username}")
-    except Exception as e:
-        print(f"❌ Ошибка авторизации: {e}")
-        return
+
 
     # Получаем список всех голосов
     try:
