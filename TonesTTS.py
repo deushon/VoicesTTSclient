@@ -4,7 +4,11 @@ from fakeyou import AsyncFakeYou
 
 async def main():
     fy = AsyncFakeYou()
+    # Call the login method with email and password and await the result
+    login = await fy.login("mihandr1@mail.ru", "199621368m")
 
+    # Print the username of the logged-in user
+    print("Logged in as:", login.username)
     # Получаем список всех голосов
     voices = await fy.list_voices()
 
@@ -29,24 +33,31 @@ async def main():
     text = input("Введите текст для преобразования в речь: ")
 
     # Создание TTS задачи
+    print("Создаём TTS-задачу...")
     tts_job = await fy.make_tts_job(selected_token, text)
 
+    if tts_job is None:
+        print("Ошибка: Не удалось создать TTS-задачу. Возможно, указан неверный токен.")
+        return
+
+    print("Ожидание завершения генерации...")
+
     # Ожидание завершения задачи
-    while not await fy.is_tts_job_ready(tts_job.job_token):
+    while not tts_job.is_ready():
         await asyncio.sleep(1)
 
     print("Генерация завершена.")
 
     # Получение и сохранение аудиофайла
-    result = await fy.retreive_audio_file(tts_job.job_token)
+    audio_content = await tts_job.audio_content()
     output_file = "output.wav"
 
     with open(output_file, "wb") as f:
-        f.write(result.content)
+        f.write(audio_content)
 
     print(f"Аудио успешно сохранено как: {output_file}")
 
 
-# Запуск асинхронного кода
+# Запуск
 if __name__ == "__main__":
     asyncio.run(main())
