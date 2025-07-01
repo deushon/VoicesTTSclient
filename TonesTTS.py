@@ -3,38 +3,50 @@ from fakeyou import AsyncFakeYou
 
 
 async def main():
-    # Создаем экземпляр AsyncFakeYou
     fy = AsyncFakeYou()
 
-    # Получаем список голосов
+    # Получаем список всех голосов
     voices = await fy.list_voices()
 
-    # Выводим все доступные названия голосов
-    print("Доступные голоса:")
-    for i, title in enumerate(voices.title):
-        print(f"{i}: {title}")
+    # Поиск голоса по названию
+    search_term = input("Введите название голоса (или часть названия): ").lower()
+    matching_indices = [
+        i for i, title in enumerate(voices.title) if search_term in title.lower()
+    ]
 
-    # Выбор голоса по номеру
-    choice = int(input("Введите номер голоса для использования: "))
-    selected_title = voices.title[choice]
-    selected_token = voices.modelTokens[choice]
+    if not matching_indices:
+        print("Голос не найден.")
+        return
+
+    # Выбираем первый совпадающий голос
+    index = matching_indices[0]
+    selected_title = voices.title[index]
+    selected_token = voices.modelTokens[index]
 
     print(f"Выбран голос: {selected_title} (Token: {selected_token})")
 
     # Ввод текста для озвучивания
     text = input("Введите текст для преобразования в речь: ")
 
-    # Генерация аудио
-    result = await fy.rapid_tts(selected_token, text)
+    # Создание TTS задачи
+    tts_job = await fy.make_tts_job(selected_token, text)
 
-    # Сохраняем файл
+    # Ожидание завершения задачи
+    while not await fy.is_tts_job_ready(tts_job.job_token):
+        await asyncio.sleep(1)
+
+    print("Генерация завершена.")
+
+    # Получение и сохранение аудиофайла
+    result = await fy.retreive_audio_file(tts_job.job_token)
     output_file = "output.wav"
+
     with open(output_file, "wb") as f:
         f.write(result.content)
 
     print(f"Аудио успешно сохранено как: {output_file}")
 
 
-# Запуск
+# Запуск асинхронного кода
 if __name__ == "__main__":
     asyncio.run(main())
