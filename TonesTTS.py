@@ -3,59 +3,83 @@ from fakeyou import AsyncFakeYou
 
 
 async def main():
+    # Инициализируем клиент
     fy = AsyncFakeYou()
-    # Call the login method with email and password and await the result
-    login = await fy.login("mihandr1@mail.ru", "199621368m")
 
-    # Print the username of the logged-in user
-    print("Logged in as:", login.username)
+    # Авторизация
+    try:
+        login = await fy.login("mihandr1@mail.ru", "199621368m")
+        print(f"✅ Успешно вошли как: {login.username}")
+    except Exception as e:
+        print(f"❌ Ошибка авторизации: {e}")
+        return
+
     # Получаем список всех голосов
-    voices = await fy.list_voices()
+    try:
+        voices = await fy.list_voices()
+        print(f"📚 Загружено {len(voices.title)} голосов")
+    except Exception as e:
+        print(f"❌ Не удалось получить список голосов: {e}")
+        return
 
-    # Поиск голоса по названию
-    search_term = input("Введите название голоса (или часть названия): ").lower()
+    # Поиск голоса по части названия
+    search_term = input("🔎 Введите название голоса (или часть): ").lower()
     matching_indices = [
         i for i, title in enumerate(voices.title) if search_term in title.lower()
     ]
 
     if not matching_indices:
-        print("Голос не найден.")
+        print("❌ Голос не найден")
         return
 
-    # Выбираем первый совпадающий голос
     index = matching_indices[0]
     selected_title = voices.title[index]
     selected_token = voices.modelTokens[index]
 
-    print(f"Выбран голос: {selected_title} (Token: {selected_token})")
+    print(f"\n🎯 Выбран голос: {selected_title} (Token: {selected_token})")
 
     # Ввод текста для озвучивания
-    text = input("Введите текст для преобразования в речь: ")
+    text = input("📝 Введите текст для преобразования в речь: ")
 
-    # Создание TTS задачи
-    print("Создаём TTS-задачу...")
-    tts_job = await fy.make_tts_job(selected_token, text)
-
-    if tts_job is None:
-        print("Ошибка: Не удалось создать TTS-задачу. Возможно, указан неверный токен.")
+    # Создание задачи TTS
+    print("\n🔊 Создаю задачу генерации речи...")
+    try:
+        job_token = await fy.make_tts_job(text=text, ttsModelToken=selected_token)
+        print(f"📨 Получен Job Token: {job_token}")
+    except Exception as e:
+        print(f"❌ Ошибка при создании задачи: {e}")
         return
 
-    print("Ожидание завершения генерации...")
+    # Проверяем статус задачи
+    print("\n⏳ Ожидание завершения генерации...")
+    while True:
+        try:
+            status = await fy.is_tts_job_ready(job_token)
+            print(f"📊 Статус задачи: {status['state']['status']}")
 
-    # Ожидание завершения задачи
-    while not tts_job.is_ready():
-        await asyncio.sleep(1)
+            if status["state"]["status"] == "complete_success":
+                break
+            elif status["state"]["status"] == "complete_failure":
+                print("❌ Сервер вернул ошибку при генерации речи.")
+                return
 
-    print("Генерация завершена.")
+            await asyncio.sleep(2)
+        except Exception as e:
+            print(f"❌ Ошибка проверки статуса: {e}")
+            return
 
-    # Получение и сохранение аудиофайла
-    audio_content = await tts_job.audio_content()
-    output_file = "output.wav"
+    # Скачиваем аудиофайл
+    print("\n📥 Загрузка готового аудиофайла...")
+    try:
+        audio_content = await fy.retreive_audio_file(job_token)
+        output_file = "output.wav"
 
-    with open(output_file, "wb") as f:
-        f.write(audio_content)
+        with open(output_file, "wb") as f:
+            f.write(audio_content)
 
-    print(f"Аудио успешно сохранено как: {output_file}")
+        print(f"✅ Аудио успешно сохранено как: {output_file}")
+    except Exception as e:
+        print(f"❌ Ошибка загрузки аудио: {e}")
 
 
 # Запуск
